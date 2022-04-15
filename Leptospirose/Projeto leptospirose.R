@@ -286,5 +286,4 @@ export(list(duplicidade_lepto = duplicidade_lepto,
             data_lepto_obito_sem_class = data_lepto_obito_sem_class,
             data_outro_obito_sem_class = data_outro_obito_sem_class),
        file = "Qualificar_LEPTO.xlsx")
-
-########
+########FIM

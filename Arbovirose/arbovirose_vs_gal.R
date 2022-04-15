@@ -12,7 +12,6 @@ data_chik <- read.dbf("C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto
 data_zika  <- read.dbf("C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto arboviroses vs gal/entrada/NINDINET.dbf")
 data_gal  <- read_excel("C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto arboviroses vs gal/entrada/arboviroses.xlsx" , sheet = 1, col_names=TRUE)
 
-
 #função remover acentos
 RemoveAcentos <- function(textoComAcentos) {
   if(!is.character(textoComAcentos)){

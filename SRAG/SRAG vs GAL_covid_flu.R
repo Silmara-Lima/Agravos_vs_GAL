@@ -244,3 +244,4 @@ write.table(srag_flu_gal_ND, file = "C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_S
 write.table(srag_flu_gal_NA, file = "C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto SRAG vs GAL/Projeto teste_srag_gal_covid_flu/saidas/sivep_gal_flu/flusgal_NA.csv", sep = ";", row.names = FALSE)
 write.table(rodar_flu, file = "C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto SRAG vs GAL/Projeto teste_srag_gal_covid_flu/saidas/rodar influenza.csv", sep = ";", row.names = FALSE)
 write.table(data_covid_e_flu__, file = "C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto SRAG vs GAL/Projeto teste_srag_gal_covid_flu/saidas/Covid_e_Flu.csv", sep = ";", row.names = FALSE)
+#####FIM

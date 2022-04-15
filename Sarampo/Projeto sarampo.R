@@ -408,7 +408,6 @@ data_exant_obito_sem_class <- subset(data_exant_obito_sem_class,
                                      select = -c(DT_data_exant))
 data_exant_obito_sem_class <- data_exant_obito_sem_class[!duplicated(data_exant_obito_sem_class), ]
 
-
 data_outro_obito_sem_class <- data_exant %>% filter(is.na(data_exant$CLASSI_FIN) & 
                                                       data_exant$EVOLUCAO == 3)
 data_outro_obito_sem_class <- subset(data_outro_obito_sem_class, 
@@ -416,7 +415,6 @@ data_outro_obito_sem_class <- subset(data_outro_obito_sem_class,
 data_outro_obito_sem_class <- subset(data_outro_obito_sem_class, 
                                      select = -c(DT_data_exant))
 data_outro_obito_sem_class <- data_outro_obito_sem_class[!duplicated(data_outro_obito_sem_class), ]
-
 
 ##saidas #nome da aba = #nome do objeto
 export(list(duplicidades = duplicidade_exant,
@@ -431,5 +429,4 @@ export(list(duplicidades = duplicidade_exant,
             corrigir_evolucao = data_exant_corrigir_evolucao,
             obito_sem_class = data_outro_obito_sem_class),
        file = "Qualificar_sarampo.xlsx")
-
 ######## FIM

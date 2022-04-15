@@ -266,10 +266,9 @@ export(list(duplicidade_O98.6 = duplicidade_O98.6,
             toxo_O98.6_corrigir_evolucao = toxo_O98.6_corrigir_evolucao),
             file = "Qualificar_O98.6.xlsx")
 
-
 export(list(duplicidade_P37.1 = duplicidade_P37.1,
             toxo_P37.1_corrigir_criterio = toxo_P37.1_corrigir_criterio, 
             notificar_RN_P37.1 = notificar_RN_P37.1,
             toxo_P37.1_corrigir_evolucao = toxo_P37.1_corrigir_evolucao),
        file = "Qualificar_P37.1.xlsx")
-########
+########FIM

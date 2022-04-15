@@ -272,5 +272,4 @@ export(list(duplicidade_rota = duplicidade_rota,
             data_rota_obito_sem_class = data_rota_obito_sem_class,
             data_outro_obito_sem_class = data_outro_obito_sem_class),
        file = "Qualificar_rota.xlsx")
-
-########
+########FIM

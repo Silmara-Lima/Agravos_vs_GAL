@@ -343,7 +343,6 @@ data_outro_obito_sem_class <- subset(data_outro_obito_sem_class,
                                      select = -c(DT_data_chagas))
 data_outro_obito_sem_class <- data_outro_obito_sem_class[!duplicated(data_outro_obito_sem_class), ]
 
-
 ##saidas #nome da aba = #nome do objeto
 export(list(duplicidades = duplicidade_chagas,
             gal_gota_notificar_sinan = gal_gota_notificar_sinan,
@@ -358,6 +357,4 @@ export(list(duplicidades = duplicidade_chagas,
             chagas_obito_sem_class = data_chagas_obito_sem_class,
             outro_obito_sem_class = data_outro_obito_sem_class),
        file = "Qualificar_chagas.xlsx")
-
 ######## FIM
-

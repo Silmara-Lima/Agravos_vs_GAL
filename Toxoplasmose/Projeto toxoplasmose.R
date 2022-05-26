@@ -1,22 +1,29 @@
-install.packages("lubridate")
-install.packages("stringr")
-install.packages("tidyverse")
-install.packages("foreign")
-install.packages("writexl")
-install.packages("dplyr")
-install.packages("rio")
 library("lubridate")
 library("stringr")
 library("tidyverse")
 library("foreign")
 library("writexl")
 library("dplyr")
+library("readxl")
 library("rio")
+library("base")
+library("purrr")
 
-#abrir arquivos
-data_notindiv <- read.dbf("C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto Toxoplasmose/entradas/NINDINET.dbf")
-data_naf_toxo <- readxl::read_excel("C:/Users/ADM/Dropbox/PC/Desktop/Scipts by_Silmara/Projeto Toxoplasmose/entradas/naf_toxo.xlsx", sheet = "Planilha1")
+############################ABRIR ARQUIVOS##########################################
+getwd()
+data_notindiv = list.files(pattern = '^NINDIN', recursive = TRUE)
 
+extrator = function(data_notindiv){
+  read.dbf(data_notindiv)
+}
+
+data_notindiv = map_dfr(data_notindiv, extrator)
+
+CNES <- read.csv("C:/Users/NDTA/Desktop/Projeto Toxoplasmose/entradas/unidades_saude.csv", header = TRUE, sep = ",")
+
+data_naf_toxo <- readxl::read_excel("C:/Users/NDTA/Desktop/Projeto Toxoplasmose/entradas/naf_toxo.xlsx", sheet = "Planilha1")
+
+############################REMOVER ACENTOS#####################################
 #função remover acentos
 RemoveAcentos <- function(textoComAcentos) {
   if(!is.character(textoComAcentos)){
@@ -32,8 +39,12 @@ RemoveAcentos <- function(textoComAcentos) {
   return(textoSemAcentos)
 }
 
-RemoveAcentos(data_notindiv$NM_PACIENT)
+NM_pacient_ <- data.frame(RemoveAcentos(data_notindiv$NM_PACIENT))
+NM_pacient_ <- str_replace_all(NM_pacient_$RemoveAcentos.data_notindiv.NM_PACIENT., " ", "")
+NM_pacient_ <- data.frame(NM_pacient_)
+data_notindiv <- cbind(data_notindiv, NM_pacient_)
 
+########################RENOMEAR MUNICÍPIOS ####################################
 #renomear código de município
 cod_ibge <- c("250010", "250020", "250030", "250040", "250050", "250053",
               "250057", "250060", "250073", "250077", "250080", "250090",
@@ -101,7 +112,7 @@ nm_municipios_PB <- c("Água Branca", "Aguiar", "Alagoa Grande", "Alagoa Nova",
                       "Gurinhém", "Gurjão", "Ibiara", "Igaracy", "Imaculada",
                       "Ingá", "Itabaiana", "Itaporanga", "Itapororoca",
                       "Itatuba", "Jacaraú", "Jericó", "João Pessoa",
-                      "Joca Claudino", "Juarez Távora", "Juazeirinho",
+                      "Santarém", "Juarez Távora", "Juazeirinho",
                       "Junco do Seridó", "Juripiranga", "Juru", "Lagoa",
                       "Lagoa de Dentro", "Lagoa Seca", "Lastro", "Livramento",
                       "Logradouro", "Lucena", "Mãe d'Água", "Malta",
@@ -112,7 +123,7 @@ nm_municipios_PB <- c("Água Branca", "Aguiar", "Alagoa Grande", "Alagoa Nova",
                       "Nazarezinho", "Nova Floresta", "Nova Olinda",
                       "Nova Palmeira", "Olho d'Água", "Olivedos", "Ouro Velho",
                       "Parari", "Passagem", "Patos", "Paulista", "Pedra Branca",
-                      "Pedra Lavrada", "Pedras de Fogo", "Pedro Régis",
+                      "Pedra Lavrada", "Pedras de Fogo", "Pedro Regis",
                       "Piancó", "Picuí", "Pilar", "Pilões","Pilõezinhos",
                       "Pirpirituba", "Pitimbu", "Pocinhos","Poço Dantas",
                       "Poço de José de Moura", "Pombal", "Prata",
@@ -123,8 +134,8 @@ nm_municipios_PB <- c("Água Branca", "Aguiar", "Alagoa Grande", "Alagoa Nova",
                       "Salgado de São Félix", "Santa Cecília", "Santa Cruz",
                       "Santa Helena", "Santa Inês", "Santa Luzia",
                       "Santa Rita", "Santa Teresinha", "Santana de Mangueira",
-                      "Santana dos Garrotes", "Santo André", "São Bentinho",
-                      "São Bento", "São Domingos", "São Domingos do Cariri",
+                      "Santana dos Garrotes", "Santo André", "São Bento de Pombal",
+                      "São Bento", "São Domingos de Pombal", "São Domingos do Cariri",
                       "São Francisco", "São João do Cariri",
                       "São João do Rio do Peixe", "São João do Tigre",
                       "São José da Lagoa Tapada", "São José de Caiana",
@@ -134,10 +145,10 @@ nm_municipios_PB <- c("Água Branca", "Aguiar", "Alagoa Grande", "Alagoa Nova",
                       "São José dos Cordeiros", "São José dos Ramos",
                       "São Mamede", "São Miguel de Taipu",
                       "São Sebastião de Lagoa de Roça","São Sebastião do Umbuzeiro",
-                      "São Vicente do Seridó", "Sapé", "Serra Branca",
+                      "Seridó", "Sapé", "Serra Branca",
                       "Serra da Raiz", "Serra Grande", "Serra Redonda",
                       "Serraria", "Sertãozinho","Sobrado", "Solânea",
-                      "Soledade", "Sossêgo", "Sousa", "Sumé", "Tacima",
+                      "Soledade", "Sossego", "Sousa", "Sumé", "Tacima",
                       "Taperoá", "Tavares", "Teixeira", "Tenório", "Triunfo",
                       "Uiraúna", "Umbuzeiro", "Várzea", "Vieirópolis",
                       "Vista Serrana", "Zabelê")
@@ -146,11 +157,106 @@ nm_municipios_PB <- data.frame(nm_municipios_PB)
 municipios_PB <- c(cod_ibge, nm_municipios_PB) 
 municipios_PB <- data.frame(municipios_PB)
 
+#acrescentar RS
+Região_de_Saúde <- c("11",	"7",	"3",	"3",	"2",	"15",	"3",	"1",	"5",	"10",	"2",	"3",
+                     "2",	"3",	"6",	"3",	"15",	"16",	"14",	"2",	"4",	"4",	"15",	"15",	
+                     "1",	"2",	"8",	"9",	"7",	"16",	"9",	"8",	"9",	"15",	"2",	"8",	
+                     "8",	"1",	"15",	"1",	"9",	"6",	"2",	"6",	"2",	"9",	"13",	"12",	
+                     "5",	"16",	"14",	"5",	"9",	"2",	"6",	"8",	"15",	"7",	"6",	"1",	
+                     "5",	"7",	"5",	"1",	"4",	"4",	"14",	"2",	"14",	"7",	"4",	"6",
+                     "7",	"2",	"2",	"6",	"3",	"16",	"4",	"15",	"2",	"12",	"5",	"7",	
+                     "7",	"11",	"12",	"12",	"7",	"14",	"12",	"14",	"8",	"1",	"9",	"12",	
+                     "16",	"6",	"12",	"11",	"13",	"2",	"3",	"10",	"5",	"2",	"1",	"6",
+                     "6",	"14",	"11",	"14",	"1",	"10",	"16",	"14",	"3",	"8",	"6",	"12",	
+                     "3",	"9",	"5",	"2",	"15",	"10",	"4",	"7",	"4",	"7",	"16",	"5",	
+                     "5",	"6",	"6",	"13",	"7",	"4",	"12",	"14",	"7",	"4",	"12",	"2",
+                     "2",	"2",	"1",	"16",	"9",	"9",	"13",	"5",	"11",	"16",	"15",	"6",
+                     "3",	"2",	"12",	"1",	"15",	"8",	"14",	"6",	"12",	"15",	"10",	"9",
+                     "7",	"6",	"1",	"6",	"7",	"7",	"16",	"13",	"8",	"13",	"15",	"10",	
+                     "5",	"9",	"5",	"10",	"7",	"6",	"9",	"11",	"6",	"8",	"6",	"5",	
+                     "12",	"6",	"12",	"3",	"5",	"4",	"1",	"5",	"2",	"7",	"16",	"2",
+                     "2",	"1",	"2",	"16",	"4",	"10",	"5",	"2",	"16",	"11",	"6",	"16",	
+                     "9",	"9",	"15",	"6",	"10",	"6",	"5")
+
+Região_de_Saúde <- data.frame(Região_de_Saúde)
+Região_de_Saúde_PB <- c(Região_de_Saúde, municipios_PB) 
+Região_de_Saúde_PB <- data.frame(Região_de_Saúde_PB)
+
+#acrescentar GRS
+GRS1 <- c("11",	"7",	"3",	"3",	"2",	"3",	"3",	"1",	"5",	"10",	"2",	"3",
+          "2",	"3",	"6",	"3",	"3",	"3",	"1",	"2",	"4",	"4",	"3",	"3",
+          "1",	"2",	"8",	"9",	"7",	"3",	"9",	"8",	"9",	"3",	"2",	"8",
+          "8",	"1",	"3",	"1",	"9",	"6",	"2",	"6",	"2",	"9",	"10",	"12",
+          "5",	"3",	"1",	"5",	"9",	"2",	"6",	"8",	"3",	"7",	"6",	"1",
+          "5",	"7",	"5",	"1",	"4",	"4",	"1",	"2",	"1",	"7",	"4",	"6",
+          "7",	"2",	"2",	"6",	"3",	"3",	"4",	"3",	"2",	"12",	"5",	"7",
+          "7",	"11",	"12",	"12",	"7",	"1",	"12",	"1",	"8",	"1",	"9",	"12",
+          "3",	"6",	"12",	"11",	"10",	"2",	"3",	"10",	"3",	"2",	"1",	"6",
+          "6",	"1",	"11",	"1",	"1",	"10",	"3",	"1",	"3",	"8",	"6",	"12",
+          "3",	"9",	"5",	"2",	"3",	"10",	"4",	"7",	"4",	"7",	"3",	"5",
+          "5",	"6",	"6",	"10",	"7",	"4",	"12",	"1",	"7",	"4",	"12",	"2",
+          "2",	"2",	"1",	"3",	"9",	"9",	"10",	"5",	"11",	"3",	"3",	"6",
+          "3",	"2",	"12",	"1",	"3",	"8",	"1",	"6",	"12",	"3",	"10",	"9",
+          "7",	"6",	"1",	"6",	"7",	"7",	"3",	"10",	"8",	"10",	"3",	"10",
+          "5",	"9",	"5",	"10",	"7",	"6",	"9",	"11",	"6",	"8",	"6",	"5",
+          "12",	"6",	"12",	"3",	"5",	"4",	"1",	"5",	"2",	"7",	"3",	"2",
+          "2",	"1",	"2",	"3",	"4",	"10",	"5",	"2",	"3",	"11",	"6",	"3",
+          "9",	"9",	"3",	"6",	"10",	"6",	"5")
+
+GRS1 <- data.frame(GRS1)
+GRS_PB <- c(GRS1, municipios_PB) 
+GRS_PB <- data.frame(GRS_PB)
+
+#acrescentar macro
+Macro <- c("3",	"3",	"2",	"2",	"1",	"2",	"2",	"1",	"2",	"3",	"1",	"2",
+           "1",	"2",	"3",	"2",	"2",	"2",	"1",	"1",	"2",	"2",	"2",	"2",
+           "1",	"1",	"3",	"3",	"3",	"2",	"3",	"3",	"3",	"2",	"1",	"3",
+           "3",	"1",	"2",	"1",	"3",	"3",	"1",	"3",	"1",	"3",	"3",	"1",
+           "2",	"2",	"1",	"2",	"3",	"1",	"3",	"3",	"2",	"3",	"3",	"1",
+           "2",	"3",	"2",	"1",	"2",	"2",	"1",	"1",	"1",	"3",	"1",	"3",
+           "3",	"1",	"1",	"3",	"2",	"2",	"2",	"2",	"1",	"1",	"2",	"3",
+           "3",	"3",	"1",	"1",	"3",	"1",	"1",	"1",	"3",	"1",	"3",	"1",
+           "2",	"3",	"1",	"3",	"3",	"1",	"2",	"3",	"2",	"1",	"1",	"3",
+           "3",	"1",	"3",	"1",	"1",	"3",	"2",	"1",	"2",	"3",	"3",	"1",
+           "2",	"3",	"2",	"1",	"2",	"3",	"2",	"3",	"2",	"3",	"2",	"2",
+           "2",	"3",	"3",	"3",	"3",	"2",	"1",	"1",	"3",	"2",	"1",	"1",
+           "1",	"1",	"1",	"2",	"3",	"3",	"3",	"2",	"3",	"2",	"2",	"3",
+           "2",	"1",	"1",	"1",	"2",	"3",	"1",	"3",	"1",	"2",	"3",	"3",
+           "3",	"3",	"1",	"3",	"3",	"3",	"2",	"3",	"3",	"3",	"2",	"3",
+           "2",	"3",	"2",	"3",	"3",	"3",	"3",	"3",	"3",	"3",	"3",	"2",
+           "1",	"3",	"1",	"2",	"2",	"2",	"1",	"2",	"1",	"3",	"2",	"1",
+           "1",	"1",	"1",	"2",	"2",	"3",	"2",	"1",	"2",	"3",	"3",	"2",
+           "3",	"3",	"2",	"3",	"3",	"3",	"2")
+
+Macro <- data.frame(Macro)
+Macro_PB <- c(Macro, municipios_PB) 
+Macro_PB <- data.frame(Macro_PB)
+
+#acrescentar GRS, RS e macro
+municipios_PB <- left_join(municipios_PB, GRS_PB, by = "cod_ibge")
+municipios_PB <- left_join(municipios_PB, Região_de_Saúde_PB, by = "cod_ibge")
+municipios_PB <- left_join(municipios_PB, Macro_PB, by = "cod_ibge")
+
+municipios_PB <- subset(municipios_PB,
+                        select = -c(nm_municipios_PB.y,
+                                    nm_municipios_PB.x.x,
+                                    nm_municipios_PB.y.y))
+
+municipios_PB <- rename(municipios_PB, GRS = GRS1)
+
 #renomear ID_MN_RESI para o left_join
 data_notindiv <- rename(data_notindiv, cod_ibge = ID_MN_RESI)
-
 data_notindiv <- left_join(data_notindiv, municipios_PB, by = "cod_ibge")
-  
+
+#renomear municipio de notificação
+CNES$cnes <- as.factor(CNES$cnes)
+data_notindiv <- rename(data_notindiv, cnes = ID_UNIDADE)
+data_notindiv <- left_join(data_notindiv, CNES, by = "cnes")
+
+data_notindiv <- rename(data_notindiv, Unidade_notificadora = nome)
+data_notindiv <- rename(data_notindiv, municipio_residencia = nm_municipios_PB.x)
+
+####################REGISTROS VÁLIDOS ##########################################  
 #filtrar por cid
 toxo_B58 <- filter(data_notindiv, data_notindiv$ID_AGRAVO == 'B58')
 toxo_B58 <- data.frame(toxo_B58)   
@@ -161,16 +267,17 @@ toxo_O98.6 <- data.frame(toxo_O98.6)
 toxo_P37.1 <- filter(data_notindiv, data_notindiv$ID_AGRAVO == 'P371')
 toxo_P37.1 <- data.frame(toxo_P37.1)
 
+##########################CRIAÇÃO DE CHAVES#####################################
 #criar chave
-id_pessoa_B58 <- paste(toxo_B58$NM_PACIENT,
+id_pessoa_B58 <- paste(toxo_B58$NM_PACIENT_,
                        toxo_B58$DT_NASC,
                        toxo_B58$nm_municipios_PB)
                        
-id_pessoa_O98.6 <- paste(toxo_O98.6$NM_PACIENT,
+id_pessoa_O98.6 <- paste(toxo_O98.6$NM_PACIENT_,
                          toxo_O98.6$DT_NASC,
                          toxo_O98.6$nm_municipios_PB)
 
-id_pessoa_P37.1 <- paste(toxo_P37.1$NM_PACIENT,
+id_pessoa_P37.1 <- paste(toxo_P37.1$NM_PACIENT_,
                          toxo_P37.1$DT_NASC,
                          toxo_P37.1$nm_municipios_PB)
 
@@ -179,7 +286,8 @@ toxo_B58 <- mutate(toxo_B58, id_pessoa_B58)
 toxo_O98.6 <- mutate(toxo_O98.6, id_pessoa_O98.6)
 toxo_P37.1 <- mutate(toxo_P37.1, id_pessoa_P37.1)
 
-# separar uplicidades
+##################DUPLICIDADES##################################################
+# separar duplicidades
 sum(duplicated(toxo_B58$id_pessoa_B58))
 sum(duplicated(toxo_O98.6$id_pessoa_O98.6))
 sum(duplicated(toxo_P37.1$id_pessoa_P37.1))
@@ -188,10 +296,35 @@ duplicidade_B58 <- toxo_B58[duplicated(toxo_B58$id_pessoa_B58), ]
 duplicidade_O98.6 <- toxo_O98.6[duplicated(toxo_O98.6$id_pessoa_O98.6), ]
 duplicidade_P37.1 <- toxo_P37.1[duplicated(toxo_P37.1$id_pessoa_P37.1), ]
 
+duplicidade_B58 <- subset(duplicidade_B58, 
+                              select = -c(NM_pacient_,
+                                           id,
+                                           municipio_id,
+                                          id_pessoa_B58))
+
+duplicidade_O98.6 <- subset(duplicidade_O98.6, 
+                          select = -c(NM_pacient_,
+                                      id,
+                                      municipio_id,
+                                      id_pessoa_O98.6))
+
+duplicidade_P37.1 <- subset(duplicidade_P37.1, 
+                          select = -c(NM_pacient_,
+                                      id,
+                                      municipio_id,
+                                      id_pessoa_P37.1))
+
+######################INCONSISTÊNCIAS###########################################
 #inconsistência B58 que é gestante
 toxo_B58_gestante <- filter(toxo_B58, 
                             toxo_B58$CS_GESTANT != 5, 
                             toxo_B58$CS_GESTANT != 6)
+
+toxo_B58_gestante <- subset(toxo_B58_gestante, 
+                          select = -c(NM_pacient_,
+                                      id,
+                                      municipio_id,
+                                      id_pessoa_B58))
 
 #B58 gestante que ainda não está em O98.6
 notificar_B58_em_O98.6 <- anti_join(toxo_B58_gestante, toxo_O98.6, 
@@ -200,6 +333,12 @@ notificar_B58_em_O98.6 <- anti_join(toxo_B58_gestante, toxo_O98.6,
 #corrigir criterio de confirmação 
 toxo_B58_corrigir_criterio <- filter(toxo_B58, 
                             toxo_B58$CRITERIO != 1)
+
+toxo_B58_corrigir_criterio <- subset(toxo_B58_corrigir_criterio, 
+                                    select = -c(NM_pacient_,
+                                      id,
+                                      municipio_id,
+                                      id_pessoa_B58))
 
 toxo_O98.6_corrigir_criterio <- filter(toxo_O98.6, 
                                   toxo_O98.6$CRITERIO != 1)
@@ -216,7 +355,7 @@ toxo_O98.6_corrigir_campo_gestante <- filter(toxo_O98.6,
                                              toxo_O98.6$CS_GESTANT != 1,
                                              toxo_O98.6$CS_GESTANT != 2,
                                              toxo_O98.6$CS_GESTANT != 3)
-                                             
+
 #corrigir idade no O98.6, notificar corretamente
 toxo_O98.6_corrigir_idade <- filter(toxo_O98.6, 
                                     toxo_O98.6$NU_IDADE_N < '4000')
@@ -237,7 +376,6 @@ toxo_O98.6_para_P37.1 <- filter(toxo_O98.6,
 
 notificar_RN_P37.1 <- anti_join(toxo_O98.6_para_P37.1, toxo_P37.1, 
                                    by.x = "NM_PACIENT", by.y = "NM_MAE_PAC")
-
 #fechar evolução de P37.1
 DT_toxo_P37.1 <- Sys.Date() - toxo_P37.1$DT_SIN_PRI
 toxo_P37.1 <- mutate(toxo_P37.1, DT_toxo_P37.1)
@@ -248,10 +386,9 @@ toxo_P37.1_corrigir_evolucao1 <- filter(toxo_P37.1,
                                         toxo_P37.1$DT_toxo_P37.1 > '420 days')
 toxo_P37.1_corrigir_evolucao <-  bind_rows(toxo_P37.1_evo_vazia, toxo_P37.1_corrigir_evolucao1)
 
-
 #olhar pela planilha do naf quem tá sem medicação e quem tá sem notificação
 
-
+################################SAIDAS##########################################
 ##saidas #nome da aba = #nome do objeto
 export(list(duplicidade_B58 = duplicidade_B58,
             notificar_B58_em_O98.6 = notificar_B58_em_O98.6, 
@@ -265,6 +402,7 @@ export(list(duplicidade_O98.6 = duplicidade_O98.6,
             toxo_O98.6_corrigir_idade = toxo_O98.6_corrigir_idade,
             toxo_O98.6_corrigir_evolucao = toxo_O98.6_corrigir_evolucao),
             file = "Qualificar_O98.6.xlsx")
+
 
 export(list(duplicidade_P37.1 = duplicidade_P37.1,
             toxo_P37.1_corrigir_criterio = toxo_P37.1_corrigir_criterio, 

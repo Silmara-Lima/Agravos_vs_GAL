@@ -1,0 +1,1418 @@
+#bibliotecas
+library("lubridate")
+library("stringr")
+library("tidyverse")
+library("foreign")
+library("writexl")
+library("dplyr")
+library("rio")
+library("readr")
+library("readxl")
+library("zip")
+
+#Fontes de GAL (relatório epidemiológico)
+#Dados arboviroses são extraídos em DBF (fonte: Sinan Net e Sinan Online)
+#planilhas do cnes
+
+############################# PLANILHA DO CNES #################################
+CNES <- read.csv(file = "C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/unidades_saude.csv", header = TRUE, sep = ",")
+
+#################### DESCOMPACTAR ARQUIVOS GAL ################################
+#descompactar zip gal_relatorio
+data_gal_relatorio_jan_mar <- zip::unzip("C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal-vigilancia-epidemiologia.zip", 
+                 exdir = "C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal_vigilancia_epidemiologia") 
+
+data_gal_relatorio_abr_jun <- zip::unzip("C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal-vigilancia-epidemiologia (1).zip", 
+                                         exdir = "C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal_vigilancia_epidemiologia(1)") 
+
+#ler csv do arquivo descompactado
+data_gal_relatorio_jan_mar <- read.csv("C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal_vigilancia_epidemiologia/data.csv", header = TRUE, sep = ";")
+data_gal_relatorio_jan_mar <- data.frame(data_gal_relatorio_jan_mar)
+
+data_gal_relatorio_abr_jun <- read.csv("C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal_vigilancia_epidemiologia(1)/data.csv", header = TRUE, sep = ";")
+data_gal_relatorio_abr_jun <- data.frame(data_gal_relatorio_abr_jun)
+
+#juntar relatorio dos meses
+data_gal_relatorio_abr_jun$Documento.Paciente.1 <- as.numeric(levels(data_gal_relatorio_abr_jun$Documento.Paciente.1))[data_gal_relatorio_abr_jun$Documento.Paciente.1]
+data_gal_relatorio_abr_jun$Documento.Paciente.2 <- as.numeric(levels(data_gal_relatorio_abr_jun$Documento.Paciente.2))[data_gal_relatorio_abr_jun$Documento.Paciente.2]
+
+data_gal_relatorio <- bind_rows(data_gal_relatorio_jan_mar,
+                                data_gal_relatorio_abr_jun)
+
+################## DESCOMPACTAR ARQUIVOS ARBOVIROSES ###########################
+#abrir arquivos dengue
+getwd()
+data_pasta_dengue = list.files(pattern = '^DENGON', recursive = TRUE)
+
+extrator = function(data_pasta_dengue){
+  read.dbf(data_pasta_dengue)
+}
+
+data_dengue = map_dfr(data_pasta_dengue, extrator)
+
+data_dengue = filter(data_dengue, data_dengue$SG_UF == 25)
+
+#abrir arquivos chik
+data_pasta_chik = list.files(pattern = '^CHIKON', recursive = TRUE)
+
+extrator1 = function(data_pasta_chik){
+  read.dbf(data_pasta_chik)
+}
+
+data_chik = map_dfr(data_pasta_chik, extrator)
+data_chik = filter(data_chik, data_chik$SG_UF == 25)
+
+#abrir arquivos zika
+data_pasta_zika = list.files(pattern = '^NINDINET', recursive = TRUE)
+
+extrator1 = function(data_pasta_zika){
+  read.dbf(data_pasta_zika)
+}
+
+data_zika = map_dfr(data_pasta_zika, extrator)
+data_zika = filter(data_zika, data_zika$ID_AGRAVO == 'A928')
+data_zika = filter(data_zika, data_zika$SG_UF == 25)
+
+############################### RENOMEAR MUNICÍPIOS ############################
+#renomear código de município
+cod_ibge <- c("250010", "250020", "250030", "250040", "250050", "250053",
+              "250057", "250060", "250073", "250077", "250080", "250090",
+              "250100", "250110", "250115", "250120", "250130", "250135",
+              "250140", "250150", "250153", "250160", "250157", "250170",
+              "250180", "250190", "250200", "250205", "250210", "250215",
+              "250220", "250230", "250240", "250250", "250270", "250280",
+              "250290", "250300", "250310", "250320", "250330", "250340",
+              "250350", "250355", "250360", "250370", "250375", "250380",
+              "250390", "250400", "250403", "250407", "250410", "250415",
+              "250420", "250430", "250435", "250440", "250450", "250460",
+              "250470", "250480", "250485", "250490", "250500", "250510",
+              "250523", "250520", "250527", "250530", "250535", "250540",
+              "250560", "250570", "250580", "250590", "250600", "250610",
+              "250620", "250625", "250630", "250640", "250650", "250660",
+              "250260", "250670", "250680", "250690", "250700", "250710",
+              "250720", "250730", "250740", "250750", "251365", "250760",
+              "250770", "250780", "250790", "250800", "250810", "250820",
+              "250830", "250840", "250850", "250855", "250860", "250870",
+              "250880", "250890", "250900", "250905", "250910", "250915",
+              "250920", "250930", "250933", "250937", "250939", "250940",
+              "250950", "250960", "250970", "250980", "250990", "251000",
+              "251010", "251020", "251030", "251040", "251050", "251060",
+              "251065", "251070", "251080", "251090", "251100", "251110",
+              "251120", "251272", "251130", "251140", "251150", "251160",
+              "251170", "251180", "251190", "251200", "251203", "251207",
+              "251210", "251220", "251230", "251240", "251250", "251260",
+              "251270", "251274", "251275", "251276", "251278", "251280",
+              "251290", "251300", "251310", "251315", "251320", "251330",
+              "251335", "251340", "251370", "251380", "251350", "251360",
+              "251385", "251392", "251390", "251396", "251394", "251398",
+              "251400", "250070", "251410", "251420", "251430", "251440",
+              "251450", "251455", "251460", "251465", "251470", "251480",
+              "251445", "251490", "251500", "251510", "251520", "251540",
+              "251530", "251550", "251560", "251570", "251580", "251590",
+              "251593", "251597", "251600", "251610", "251615", "251620",
+              "251630", "251640", "251650", "251660", "251670", "251675",
+              "251680", "251690", "251700", "251710", "251720", "250550",
+              "251740")
+
+cod_ibge <- data.frame(cod_ibge)
+nm_municipios_PB <- c("Água Branca", "Aguiar", "Alagoa Grande", "Alagoa Nova",
+                      "Alagoinha", "Alcantil","Algodão de Jandaíra", "Alhandra",
+                      "Amparo", "Aparecida", "Araçagi", "Arara", "Araruna",
+                      "Areia", "Areia de Baraúnas", "Areial", "Aroeiras",
+                      "Assunção", "Baía da Traição", "Bananeiras", "Baraúna",
+                      "Barra de Santa Rosa", "Barra de Santana", 
+                      "Barra de São Miguel", "Bayeux", "Belém",
+                      "Belém do Brejo do Cruz", "Bernardino Batista",
+                      "Boa Ventura", "Boa Vista", "Bom Jesus", "Bom Sucesso",
+                      "Bonito de Santa Fé", "Boqueirão", "Borborema",
+                      "Brejo do Cruz", "Brejo dos Santos", "Caaporã",
+                      "Cabaceiras", "Cabedelo", "Cachoeira dos Índios",
+                      "Cacimba de Areia", "Cacimba de Dentro", "Cacimbas",
+                      "Caiçara", "Cajazeiras", "Cajazeirinhas", "Caldas Brandão",
+                      "Camalaú", "Campina Grande", "Capim", "Caraúbas",
+                      "Carrapateira", "Casserengue", "Catingueira",
+                      "Catolé do Rocha", "Caturité", "Conceição", "Condado",
+                      "Conde", "Congo", "Coremas", "Coxixola", 
+                      "Cruz do Espírito Santo", "Cubati", "Cuité",
+                      "Cuité de Mamanguape", "Cuitegi", "Curral de Cima",
+                      "Curral Velho", "Damião", "Desterro", "Diamante",
+                      "Dona Inês", "Duas Estradas", "Emas", "Esperança",
+                      "Fagundes", "Frei Martinho", "Gado Bravo", "Guarabira",
+                      "Gurinhém", "Gurjão", "Ibiara", "Igaracy", "Imaculada",
+                      "Ingá", "Itabaiana", "Itaporanga", "Itapororoca",
+                      "Itatuba", "Jacaraú", "Jericó", "João Pessoa",
+                      "Santarém", "Juarez Távora", "Juazeirinho",
+                      "Junco do Seridó", "Juripiranga", "Juru", "Lagoa",
+                      "Lagoa de Dentro", "Lagoa Seca", "Lastro", "Livramento",
+                      "Logradouro", "Lucena", "Mãe d'Água", "Malta",
+                      "Mamanguape", "Manaíra", "Marcação", "Mari", 
+                      "Marizópolis", "Massaranduba", "Mataraca", "Matinhas",
+                      "Mato Grosso", "Maturéia", "Mogeiro", "Montadas",
+                      "Monte Horebe", "Monteiro", "Mulungu", "Natuba",
+                      "Nazarezinho", "Nova Floresta", "Nova Olinda",
+                      "Nova Palmeira", "Olho d'Água", "Olivedos", "Ouro Velho",
+                      "Parari", "Passagem", "Patos", "Paulista", "Pedra Branca",
+                      "Pedra Lavrada", "Pedras de Fogo", "Pedro Regis",
+                      "Piancó", "Picuí", "Pilar", "Pilões","Pilõezinhos",
+                      "Pirpirituba", "Pitimbu", "Pocinhos","Poço Dantas",
+                      "Poço de José de Moura", "Pombal", "Prata",
+                      "Princesa Isabel", "Puxinanã", "Queimadas", "Quixabá",
+                      "Remígio", "Riachão", "Riachão do Bacamarte",
+                      "Riachão do Poço", "Riacho de Santo Antônio",
+                      "Riacho dos Cavalos", "Rio Tinto", "Salgadinho",
+                      "Salgado de São Félix", "Santa Cecília", "Santa Cruz",
+                      "Santa Helena", "Santa Inês", "Santa Luzia",
+                      "Santa Rita", "Santa Teresinha", "Santana de Mangueira",
+                      "Santana dos Garrotes", "Santo André", "São Bento de Pombal",
+                      "São Bento", "São Domingos de Pombal", "São Domingos do Cariri",
+                      "São Francisco", "São João do Cariri",
+                      "São João do Rio do Peixe", "São João do Tigre",
+                      "São José da Lagoa Tapada", "São José de Caiana",
+                      "São José de Espinharas", "São José de Piranhas",
+                      "São José de Princesa", "São José do Bonfim",
+                      "São José do Brejo do Cruz", "São José do Sabugi",
+                      "São José dos Cordeiros", "São José dos Ramos",
+                      "São Mamede", "São Miguel de Taipu",
+                      "São Sebastião de Lagoa de Roça","São Sebastião do Umbuzeiro",
+                      "Seridó", "Sapé", "Serra Branca",
+                      "Serra da Raiz", "Serra Grande", "Serra Redonda",
+                      "Serraria", "Sertãozinho","Sobrado", "Solânea",
+                      "Soledade", "Sossego", "Sousa", "Sumé", "Tacima",
+                      "Taperoá", "Tavares", "Teixeira", "Tenório", "Triunfo",
+                      "Uiraúna", "Umbuzeiro", "Várzea", "Vieirópolis",
+                      "Vista Serrana", "Zabelê")
+
+nm_municipios_PB <- data.frame(nm_municipios_PB)
+municipios_PB <- c(cod_ibge, nm_municipios_PB) 
+municipios_PB <- data.frame(municipios_PB)
+
+#acrescentar RS
+Região_de_Saúde <- c("11",	"7",	"3",	"3",	"2",	"15",	"3",	"1",	"5",	"10",	"2",	"3",
+                     "2",	"3",	"6",	"3",	"15",	"16",	"14",	"2",	"4",	"4",	"15",	"15",	
+                     "1",	"2",	"8",	"9",	"7",	"16",	"9",	"8",	"9",	"15",	"2",	"8",	
+                     "8",	"1",	"15",	"1",	"9",	"6",	"2",	"6",	"2",	"9",	"13",	"12",	
+                     "5",	"16",	"14",	"5",	"9",	"2",	"6",	"8",	"15",	"7",	"6",	"1",	
+                     "5",	"7",	"5",	"1",	"4",	"4",	"14",	"2",	"14",	"7",	"4",	"6",
+                     "7",	"2",	"2",	"6",	"3",	"16",	"4",	"15",	"2",	"12",	"5",	"7",	
+                     "7",	"11",	"12",	"12",	"7",	"14",	"12",	"14",	"8",	"1",	"9",	"12",	
+                     "16",	"6",	"12",	"11",	"13",	"2",	"3",	"10",	"5",	"2",	"1",	"6",
+                     "6",	"14",	"11",	"14",	"1",	"10",	"16",	"14",	"3",	"8",	"6",	"12",	
+                     "3",	"9",	"5",	"2",	"15",	"10",	"4",	"7",	"4",	"7",	"16",	"5",	
+                     "5",	"6",	"6",	"13",	"7",	"4",	"12",	"14",	"7",	"4",	"12",	"2",
+                     "2",	"2",	"1",	"16",	"9",	"9",	"13",	"5",	"11",	"16",	"15",	"6",
+                     "3",	"2",	"12",	"1",	"15",	"8",	"14",	"6",	"12",	"15",	"10",	"9",
+                     "7",	"6",	"1",	"6",	"7",	"7",	"16",	"13",	"8",	"13",	"15",	"10",	
+                     "5",	"9",	"5",	"10",	"7",	"6",	"9",	"11",	"6",	"8",	"6",	"5",	
+                     "12",	"6",	"12",	"3",	"5",	"4",	"1",	"5",	"2",	"7",	"16",	"2",
+                     "2",	"1",	"2",	"16",	"4",	"10",	"5",	"2",	"16",	"11",	"6",	"16",	
+                     "9",	"9",	"15",	"6",	"10",	"6",	"5")
+
+Região_de_Saúde <- data.frame(Região_de_Saúde)
+Região_de_Saúde_PB <- c(Região_de_Saúde, municipios_PB) 
+Região_de_Saúde_PB <- data.frame(Região_de_Saúde_PB)
+
+#acrescentar GRS
+GRS1 <- c("11",	"7",	"3",	"3",	"2",	"3",	"3",	"1",	"5",	"10",	"2",	"3",
+          "2",	"3",	"6",	"3",	"3",	"3",	"1",	"2",	"4",	"4",	"3",	"3",
+          "1",	"2",	"8",	"9",	"7",	"3",	"9",	"8",	"9",	"3",	"2",	"8",
+          "8",	"1",	"3",	"1",	"9",	"6",	"2",	"6",	"2",	"9",	"10",	"12",
+          "5",	"3",	"1",	"5",	"9",	"2",	"6",	"8",	"3",	"7",	"6",	"1",
+          "5",	"7",	"5",	"1",	"4",	"4",	"1",	"2",	"1",	"7",	"4",	"6",
+          "7",	"2",	"2",	"6",	"3",	"3",	"4",	"3",	"2",	"12",	"5",	"7",
+          "7",	"11",	"12",	"12",	"7",	"1",	"12",	"1",	"8",	"1",	"9",	"12",
+          "3",	"6",	"12",	"11",	"10",	"2",	"3",	"10",	"3",	"2",	"1",	"6",
+          "6",	"1",	"11",	"1",	"1",	"10",	"3",	"1",	"3",	"8",	"6",	"12",
+          "3",	"9",	"5",	"2",	"3",	"10",	"4",	"7",	"4",	"7",	"3",	"5",
+          "5",	"6",	"6",	"10",	"7",	"4",	"12",	"1",	"7",	"4",	"12",	"2",
+          "2",	"2",	"1",	"3",	"9",	"9",	"10",	"5",	"11",	"3",	"3",	"6",
+          "3",	"2",	"12",	"1",	"3",	"8",	"1",	"6",	"12",	"3",	"10",	"9",
+          "7",	"6",	"1",	"6",	"7",	"7",	"3",	"10",	"8",	"10",	"3",	"10",
+          "5",	"9",	"5",	"10",	"7",	"6",	"9",	"11",	"6",	"8",	"6",	"5",
+          "12",	"6",	"12",	"3",	"5",	"4",	"1",	"5",	"2",	"7",	"3",	"2",
+          "2",	"1",	"2",	"3",	"4",	"10",	"5",	"2",	"3",	"11",	"6",	"3",
+          "9",	"9",	"3",	"6",	"10",	"6",	"5")
+
+GRS1 <- data.frame(GRS1)
+GRS_PB <- c(GRS1, municipios_PB) 
+GRS_PB <- data.frame(GRS_PB)
+
+#acrescentar macro
+Macro <- c("3",	"3",	"2",	"2",	"1",	"2",	"2",	"1",	"2",	"3",	"1",	"2",
+           "1",	"2",	"3",	"2",	"2",	"2",	"1",	"1",	"2",	"2",	"2",	"2",
+           "1",	"1",	"3",	"3",	"3",	"2",	"3",	"3",	"3",	"2",	"1",	"3",
+           "3",	"1",	"2",	"1",	"3",	"3",	"1",	"3",	"1",	"3",	"3",	"1",
+           "2",	"2",	"1",	"2",	"3",	"1",	"3",	"3",	"2",	"3",	"3",	"1",
+           "2",	"3",	"2",	"1",	"2",	"2",	"1",	"1",	"1",	"3",	"1",	"3",
+           "3",	"1",	"1",	"3",	"2",	"2",	"2",	"2",	"1",	"1",	"2",	"3",
+           "3",	"3",	"1",	"1",	"3",	"1",	"1",	"1",	"3",	"1",	"3",	"1",
+           "2",	"3",	"1",	"3",	"3",	"1",	"2",	"3",	"2",	"1",	"1",	"3",
+           "3",	"1",	"3",	"1",	"1",	"3",	"2",	"1",	"2",	"3",	"3",	"1",
+           "2",	"3",	"2",	"1",	"2",	"3",	"2",	"3",	"2",	"3",	"2",	"2",
+           "2",	"3",	"3",	"3",	"3",	"2",	"1",	"1",	"3",	"2",	"1",	"1",
+           "1",	"1",	"1",	"2",	"3",	"3",	"3",	"2",	"3",	"2",	"2",	"3",
+           "2",	"1",	"1",	"1",	"2",	"3",	"1",	"3",	"1",	"2",	"3",	"3",
+           "3",	"3",	"1",	"3",	"3",	"3",	"2",	"3",	"3",	"3",	"2",	"3",
+           "2",	"3",	"2",	"3",	"3",	"3",	"3",	"3",	"3",	"3",	"3",	"2",
+           "1",	"3",	"1",	"2",	"2",	"2",	"1",	"2",	"1",	"3",	"2",	"1",
+           "1",	"1",	"1",	"2",	"2",	"3",	"2",	"1",	"2",	"3",	"3",	"2",
+           "3",	"3",	"2",	"3",	"3",	"3",	"2")
+
+Macro <- data.frame(Macro)
+Macro_PB <- c(Macro, municipios_PB) 
+Macro_PB <- data.frame(Macro_PB)
+
+#acrescentar GRS, RS e macro
+municipios_PB <- left_join(municipios_PB, GRS_PB, by = "cod_ibge")
+municipios_PB <- left_join(municipios_PB, Região_de_Saúde_PB, by = "cod_ibge")
+municipios_PB <- left_join(municipios_PB, Macro_PB, by = "cod_ibge")
+
+municipios_PB <- subset(municipios_PB,
+                        select = -c(nm_municipios_PB.y,
+                                    nm_municipios_PB.x.x,
+                                    nm_municipios_PB.y.y))
+
+municipios_PB <- rename(municipios_PB, GRS = GRS1)
+
+municipios_PB <- municipios_PB %>% 
+  mutate_if(is.character, toupper)
+
+#retirar municipio nulo
+data_dengue <- data_dengue %>% filter(!is.na(data_dengue$ID_MN_RESI))
+#renomear ID_MN_RESI para o left_join GRS, RS e Macro
+data_dengue <- dplyr::rename(data_dengue, cod_ibge = ID_MN_RESI)
+data_dengue <- left_join(data_dengue, municipios_PB, by = "cod_ibge")
+data_dengue <- rename(data_dengue, municipio_residencia = nm_municipios_PB.x)
+
+#retirar municipio nulo
+data_chik <- data_chik %>% filter(!is.na(data_chik$ID_MN_RESI))
+#renomear ID_MN_RESI para o left_join GRS, RS e Macro
+data_chik <- dplyr::rename(data_chik, cod_ibge = ID_MN_RESI)
+data_chik <- left_join(data_chik, municipios_PB, by = "cod_ibge")
+data_chik <- rename(data_chik, municipio_residencia = nm_municipios_PB.x)
+
+#retirar municipio nulo
+data_zika <- data_zika %>% filter(!is.na(data_zika$ID_MN_RESI))
+#renomear ID_MN_RESI para o left_join GRS, RS e Macro
+data_zika <- dplyr::rename(data_zika, cod_ibge = ID_MN_RESI)
+data_zika <- left_join(data_zika, municipios_PB, by = "cod_ibge")
+data_zika <- rename(data_zika, municipio_residencia = nm_municipios_PB.x)
+
+#renomear ID_UNIDADE para o left_join COM CNES
+CNES$cnes <- as.factor(CNES$cnes)
+
+data_dengue <- dplyr::rename(data_dengue, cnes = ID_UNIDADE)
+data_chik <- dplyr::rename(data_chik, cnes = ID_UNIDADE)
+data_zika <- dplyr::rename(data_zika, cnes = ID_UNIDADE)
+
+#dengue
+data_dengue <- left_join(data_dengue, CNES, by = "cnes")
+data_dengue <- subset(data_dengue, 
+                      select = -c(id,
+                                  municipio_id))
+data_dengue <- dplyr::rename(data_dengue, unidade_notificadora = nome)
+
+#data_chik
+data_chik <- left_join(data_chik, CNES, by = "cnes")
+data_chik <- subset(data_chik, 
+                    select = -c(id,
+                                municipio_id))
+data_chik <- dplyr::rename(data_chik, unidade_notificadora = nome)
+
+#data_zika
+data_zika <- left_join(data_zika, CNES, by = "cnes")
+data_zika <- subset(data_zika, 
+                    select = -c(id,
+                                municipio_id))
+data_zika <- dplyr::rename(data_zika, unidade_notificadora = nome)
+
+################## FILTRAR REGISTROS VALIDOS ###################################
+#separar registros válidos para análise
+data_gal_relatorio <- filter(data_gal_relatorio, 
+                             data_gal_relatorio$Estado.de.Residência == "PB")
+
+################## AJUSTAR DATAS ###############################################
+#ajustar datas
+#data_dengue$DT_NASC <- dmy(data_dengue$DT_NASC)
+#data_chik$DT_NASC <- dmy(data_chik$DT_NASC)
+#data_zika$DT_NASC <- dmy(data_zika$DT_NASC)
+
+data_gal_relatorio$Data.de.Nascimento <- dmy(data_gal_relatorio$Data.de.Nascimento)
+
+#################### FUNÇÃO REMOVER ACENTO E AJUSTE DE CLASSES #################
+#ajustar de números
+data_gal_relatorio$Requisição <- format(data_gal_relatorio$Requisição, scientific = FALSE)
+
+#função remover acentos
+RemoveAcentos <- function(textoComAcentos) {
+  
+  # Se nao foi informado texto
+  if(!is.character(textoComAcentos)){
+    on.exit()
+  }
+  
+  # Letras com acentos
+  letrasComAcentos <- "áéíóúÁÉÍÓÚýÝàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛãõÃÕñÑäëïöüÄËÏÖÜÿçÇ´`^~¨"
+  
+  # Letras equivalentes sem acentos
+  letrasSemAcentos <- "aeiouAEIOUyYaeiouAEIOUaeiouAEIOUaoAOnNaeiouAEIOUycC     "
+  
+  textoSemAcentos <- chartr(
+    old = letrasComAcentos,
+    new = letrasSemAcentos,
+    x = textoComAcentos
+  ) 
+  
+  # Retorno da funcao
+  return(textoSemAcentos)
+}
+
+############################# CRIACAO DE CHAVE ###############################
+#criação de ID_Pessoa
+id_pessoa_gal_relatorio <- data.frame(paste(data_gal_relatorio$Paciente,
+                                            data_gal_relatorio$Data.de.Nascimento,
+                                            data_gal_relatorio$Municipio.de.Residência)) 
+
+id_pessoa_dengue <- data.frame(paste(data_dengue$NM_PACIENT,
+                                      data_dengue$DT_NASC,
+                                      data_dengue$municipio_residencia))
+
+id_pessoa_chik <- data.frame(paste(data_chik$NM_PACIENT,
+                                   data_chik$DT_NASC,
+                                   data_chik$municipio_residencia))
+
+id_pessoa_zika <- data.frame(paste(data_zika$NM_PACIENT,
+                                   data_zika$DT_NASC,
+                                   data_zika$municipio_residencia))
+
+########################### NORMALIZAR CHAVES ################################
+id_pessoa_gal_relatorio <- data.frame(RemoveAcentos(id_pessoa_gal_relatorio$paste.data_gal_relatorio.Paciente..data_gal_relatorio.Data.de.Nascimento..)) 
+id_pessoa_gal_relatorio <- str_replace_all(id_pessoa_gal_relatorio$RemoveAcentos.id_pessoa_gal_relatorio.paste.data_gal_relatorio.Paciente..data_gal_relatorio.Data.de.Nascimento..., " ", "")
+id_pessoa_gal_relatorio <- data.frame(id_pessoa_gal_relatorio)
+id_pessoa_gal_relatorio <- rename(id_pessoa_gal_relatorio, "id_pessoa" = "id_pessoa_gal_relatorio")
+
+id_pessoa_dengue <- data.frame(RemoveAcentos(id_pessoa_dengue$paste.data_dengue.NM_PACIENT..data_dengue.DT_NASC..data_dengue.municipio_residencia.)) 
+id_pessoa_dengue <- str_replace_all(id_pessoa_dengue$RemoveAcentos.id_pessoa_dengue.paste.data_dengue.NM_PACIENT..data_dengue.DT_NASC..data_dengue.municipio_residencia.., " ", "")
+id_pessoa_dengue <- data.frame(id_pessoa_dengue)
+id_pessoa_dengue <- rename(id_pessoa_dengue, "id_pessoa" = "id_pessoa_dengue")
+
+id_pessoa_chik <- data.frame(RemoveAcentos(id_pessoa_chik$paste.data_chik.NM_PACIENT..data_chik.DT_NASC..data_chik.municipio_residencia.)) 
+id_pessoa_chik <- str_replace_all(id_pessoa_chik$RemoveAcentos.id_pessoa_chik.paste.data_chik.NM_PACIENT..data_chik.DT_NASC..data_chik.municipio_residencia.., " ", "")
+id_pessoa_chik <- data.frame(id_pessoa_chik)
+id_pessoa_chik <- rename(id_pessoa_chik, "id_pessoa" = "id_pessoa_chik")
+
+id_pessoa_zika <- data.frame(RemoveAcentos(id_pessoa_zika$paste.data_zika.NM_PACIENT..data_zika.DT_NASC..data_zika.municipio_residencia.)) 
+id_pessoa_zika <- str_replace_all(id_pessoa_zika$RemoveAcentos.id_pessoa_zika.paste.data_zika.NM_PACIENT..data_zika.DT_NASC..data_zika.municipio_residencia.., " ", "")
+id_pessoa_zika <- data.frame(id_pessoa_zika)
+id_pessoa_zika <- rename(id_pessoa_zika, "id_pessoa" = "id_pessoa_zika")
+
+#acrescentar coluna com ID_Pessoa
+data_gal_relatorio <- mutate(data_gal_relatorio, id_pessoa_gal_relatorio)
+data_dengue <- mutate(data_dengue, id_pessoa_dengue)
+data_chik <- mutate(data_chik, id_pessoa_chik)
+data_zika <- mutate(data_zika, id_pessoa_zika)
+
+########################### REAGENTES GAL ######################################
+gal_reagente_1 <- filter(data_gal_relatorio,
+                       data_gal_relatorio$X1º.Campo.Resultado == "Resultado: Detectável")
+
+gal_reagente_2 <- filter(data_gal_relatorio,
+                         data_gal_relatorio$X1º.Campo.Resultado == "Resultado: Reagente")
+
+#juntar detectáveis e reagentes
+gal_positivo <- bind_rows(gal_reagente_1,
+                          gal_reagente_2)
+
+########################### SEPARAR GAL POR EXAME #############################
+gal_dengue <- gal_positivo %>% 
+                filter(str_detect(Exame, regex("\\bDengue")))
+
+gal_chik <- gal_positivo %>% 
+               filter(str_detect(Exame, regex("\\bChik")))
+
+gal_zika <- gal_positivo %>% 
+              filter(str_detect(Exame, regex("\\bZika")))
+
+###################### SINAN SEM PREENCHIMENTO DE EXAMES ##############
+#dengue sem preenchimento de exame
+#dengue_sem_exame <- data_dengue %>% 
+                      #filter(is.na(data_dengue$RESUL_PCR_))
+
+#dengue_sem_exame <- dengue_sem_exame %>% 
+                      #filter(is.na(dengue_sem_exame$RESUL_SORO))
+
+#dengue_sem_exame <- dengue_sem_exame %>% 
+                      #filter(is.na(dengue_sem_exame$RESUL_NS1))
+
+#dengue_sem_exame <- dengue_sem_exame %>% 
+                      #filter(is.na(dengue_sem_exame$RESUL_VI_N))
+
+#dengue_sem_exame <- dengue_sem_exame %>% 
+                      #filter(is.na(dengue_sem_exame$HISTOPA_N))
+
+#dengue_sem_exame <- dengue_sem_exame %>% 
+                     # filter(is.na(dengue_sem_exame$IMUNOH_N))
+
+#dengue_sem_exame <- dengue_sem_exame %>% 
+                      #filter(is.na(dengue_sem_exame$RESUL_PRNT))
+
+#chikungunya sem preenchimento de exame
+#chik_sem_exame <- data_chik %>% 
+                    #filter(is.na(data_chik$RESUL_PCR_))
+
+#chik_sem_exame <- chik_sem_exame %>% 
+                   # filter(is.na(chik_sem_exame$RESUL_SORO))
+
+#chik_sem_exame <- chik_sem_exame %>% 
+                   # filter(is.na(chik_sem_exame$RESUL_NS1))
+
+#chik_sem_exame <- chik_sem_exame %>% 
+                   # filter(is.na(chik_sem_exame$RESUL_VI_N))
+
+#chik_sem_exame <- chik_sem_exame %>% 
+                    #filter(is.na(chik_sem_exame$HISTOPA_N))
+
+#chik_sem_exame <- chik_sem_exame %>% 
+                   # filter(is.na(chik_sem_exame$IMUNOH_N))
+
+#chik_sem_exame <- chik_sem_exame %>% 
+                   # filter(is.na(chik_sem_exame$RESUL_PRNT))
+
+#zika sem preenchimento de exame
+#zika_sem_exame <- data_zika %>% 
+                    #filter(is.na(data_zika$CRITERIO) | 
+                            
+                            # data_zika$CRITERIO == 2)
+
+############################ TRABALHAR GESTANTES ###############################
+#cruzar bases gestante dengue, chik e zika
+
+#dengue sinan x dengue gal
+dengue_gestante_gal_dengue_1 <- left_join(data_dengue,
+                                          gal_dengue, by = "id_pessoa")
+
+dengue_gestante_gal_dengue_1 <- filter(dengue_gestante_gal_dengue_1,
+                                       dengue_gestante_gal_dengue_1$CS_GESTANT == "1" |
+                                         dengue_gestante_gal_dengue_1$CS_GESTANT == "2" |
+                                         dengue_gestante_gal_dengue_1$CS_GESTANT == "3" |
+                                         dengue_gestante_gal_dengue_1$CS_GESTANT == "4")
+
+dengue_gestante_gal_dengue_1 <- select(dengue_gestante_gal_dengue_1,
+                                       Requisição,
+                                       Unidade.Solicitante,
+                                       Agravo.Sinan,
+                                       Núm..Notificação.Sinan,
+                                       Data.Notificação.Sinan,
+                                       Paciente,
+                                       Data.de.Nascimento,
+                                       Nome.da.Mãe,
+                                       Municipio.de.Residência,
+                                       Exame,
+                                       Metodologia,
+                                       Data.da.Coleta,
+                                       X1º.Campo.Resultado,
+                                       NU_NOTIFIC,
+                                       ID_AGRAVO,
+                                       NM_PACIENT,
+                                       NM_PACIENT,
+                                       DT_NASC,
+                                       NU_IDADE_N,
+                                       CS_GESTANT,
+                                       municipio_residencia,
+                                       GRS,
+                                       Região_de_Saúde,
+                                       Macro,
+                                       RESUL_PCR_,
+                                       RESUL_SORO,
+                                       RESUL_NS1,
+                                       RESUL_VI_N,
+                                       HISTOPA_N,
+                                       IMUNOH_N,
+                                       RESUL_PRNT,
+                                       CLASSI_FIN,
+                                       CRITERIO,
+                                       EVOLUCAO,
+                                       DT_OBITO,
+                                       DT_ENCERRA, 
+                                       id_pessoa)
+
+dengue_gestante_gal_dengue_1 <- rename(dengue_gestante_gal_dengue_1, Resul_dengue = X1º.Campo.Resultado)
+
+#dengue sinan x chikungunya gal
+dengue_gestante_gal_chik_1 <- left_join(data_dengue,
+                                        gal_chik, by = "id_pessoa")
+
+dengue_gestante_gal_chik_1 <- filter(dengue_gestante_gal_chik_1,
+                                     dengue_gestante_gal_chik_1$CS_GESTANT == "1" |
+                                     dengue_gestante_gal_chik_1$CS_GESTANT == "2" |
+                                     dengue_gestante_gal_chik_1$CS_GESTANT == "3" |
+                                     dengue_gestante_gal_chik_1$CS_GESTANT == "4")
+
+dengue_gestante_gal_chik_1 <- select(dengue_gestante_gal_chik_1,
+                                       Requisição,
+                                       Unidade.Solicitante,
+                                       Agravo.Sinan,
+                                       Núm..Notificação.Sinan,
+                                       Data.Notificação.Sinan,
+                                       Paciente,
+                                       Data.de.Nascimento,
+                                       Nome.da.Mãe,
+                                       Municipio.de.Residência,
+                                       Exame,
+                                       Metodologia,
+                                       Data.da.Coleta,
+                                       X1º.Campo.Resultado,
+                                       NU_NOTIFIC,
+                                       ID_AGRAVO,
+                                       NM_PACIENT,
+                                       NM_PACIENT,
+                                       DT_NASC,
+                                       NU_IDADE_N,
+                                       CS_GESTANT,
+                                       municipio_residencia,
+                                       GRS,
+                                       Região_de_Saúde,
+                                       Macro,
+                                       RESUL_PCR_,
+                                       RESUL_SORO,
+                                       RESUL_NS1,
+                                       RESUL_VI_N,
+                                       HISTOPA_N,
+                                       IMUNOH_N,
+                                       RESUL_PRNT,
+                                       CLASSI_FIN,
+                                       CRITERIO,
+                                       EVOLUCAO,
+                                       DT_OBITO,
+                                       DT_ENCERRA, 
+                                       id_pessoa)
+
+dengue_gestante_gal_chik_1 <- rename(dengue_gestante_gal_chik_1, Resul_chik = X1º.Campo.Resultado)
+dengue_gestante_gal_chik_1 <- select(dengue_gestante_gal_chik_1,
+                                     Requisição,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     Resul_chik,
+                                     id_pessoa)
+
+#dengue sinan x zika gal
+dengue_gestante_gal_zika_1 <- left_join(data_dengue,
+                                        gal_zika, by = "id_pessoa")
+
+dengue_gestante_gal_zika_1 <- filter(dengue_gestante_gal_zika_1,
+                                     dengue_gestante_gal_zika_1$CS_GESTANT == "1" |
+                                     dengue_gestante_gal_zika_1$CS_GESTANT == "2" |
+                                     dengue_gestante_gal_zika_1$CS_GESTANT == "3" |
+                                     dengue_gestante_gal_zika_1$CS_GESTANT == "4")
+
+dengue_gestante_gal_zika_1 <- select(dengue_gestante_gal_zika_1,
+                                     Requisição,
+                                     Unidade.Solicitante,
+                                     Agravo.Sinan,
+                                     Núm..Notificação.Sinan,
+                                     Data.Notificação.Sinan,
+                                     Paciente,
+                                     Data.de.Nascimento,
+                                     Nome.da.Mãe,
+                                     Municipio.de.Residência,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     X1º.Campo.Resultado,
+                                     NU_NOTIFIC,
+                                     ID_AGRAVO,
+                                     NM_PACIENT,
+                                     NM_PACIENT,
+                                     DT_NASC,
+                                     NU_IDADE_N,
+                                     CS_GESTANT,
+                                     municipio_residencia,
+                                     GRS,
+                                     Região_de_Saúde,
+                                     Macro,
+                                     RESUL_PCR_,
+                                     RESUL_SORO,
+                                     RESUL_NS1,
+                                     RESUL_VI_N,
+                                     HISTOPA_N,
+                                     IMUNOH_N,
+                                     RESUL_PRNT,
+                                     CLASSI_FIN,
+                                     CRITERIO,
+                                     EVOLUCAO,
+                                     DT_OBITO,
+                                     DT_ENCERRA, 
+                                     id_pessoa)
+
+dengue_gestante_gal_zika_1 <- rename(dengue_gestante_gal_zika_1, Resul_zika = X1º.Campo.Resultado)
+dengue_gestante_gal_zika_1 <- select(dengue_gestante_gal_zika_1,
+                                     Requisição,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     Resul_zika,
+                                     id_pessoa)
+
+###juntar dengue
+dengue_gestante_gal <- left_join(dengue_gestante_gal_dengue_1, dengue_gestante_gal_chik_1, by = "id_pessoa")
+dengue_gestante_gal <- left_join(dengue_gestante_gal, dengue_gestante_gal_zika_1, by = "id_pessoa")  
+  
+dengue_gestante_gal <- select(dengue_gestante_gal,
+                              NU_NOTIFIC,
+                              ID_AGRAVO,
+                              NM_PACIENT,
+                              Requisição.x,
+                              Exame.x,
+                              Metodologia.x,
+                              Resul_dengue,
+                              Requisição.y,
+                              Exame.y,
+                              Metodologia.y,
+                              Resul_chik,
+                              Requisição,
+                              Exame,
+                              Metodologia,
+                              Resul_zika,
+                              DT_NASC,
+                              NU_IDADE_N,
+                              CS_GESTANT,
+                              municipio_residencia,
+                              GRS,
+                              Região_de_Saúde,
+                              Macro,
+                              RESUL_PCR_,
+                              RESUL_SORO,
+                              RESUL_NS1,
+                              RESUL_VI_N,
+                              HISTOPA_N,
+                              IMUNOH_N,
+                              RESUL_PRNT,
+                              CLASSI_FIN,
+                              CRITERIO,
+                              EVOLUCAO,
+                              DT_OBITO,
+                              DT_ENCERRA,
+                              Unidade.Solicitante,
+                              Agravo.Sinan,
+                              Núm..Notificação.Sinan,
+                              Data.Notificação.Sinan,
+                              Paciente,
+                              Data.de.Nascimento,
+                              Nome.da.Mãe,
+                              Municipio.de.Residência,
+                              id_pessoa)
+
+dengue_gestante_gal <- rename(dengue_gestante_gal,
+                              Requisição_DE = Requisição.x,
+                              Exame_DE = Exame.x,
+                              Metodologia_DE = Metodologia.x,
+                              Requisição_CH = Requisição.y,
+                              Exame_CH = Exame.y,
+                              Metodologia_CH = Metodologia.y,
+                              Requisição_ZK = Requisição,
+                              Exame_ZK = Exame,
+                              Metodologia_ZK = Metodologia)
+
+#chikungunya sinan x dengue gal
+chik_gestante_gal_dengue_1 <- left_join(data_chik,
+                                        gal_dengue, by = "id_pessoa")
+
+chik_gestante_gal_dengue_1 <- filter(chik_gestante_gal_dengue_1,
+                                     chik_gestante_gal_dengue_1$CS_GESTANT == "1" |
+                                       chik_gestante_gal_dengue_1$CS_GESTANT == "2" |
+                                       chik_gestante_gal_dengue_1$CS_GESTANT == "3" |
+                                       chik_gestante_gal_dengue_1$CS_GESTANT == "4")
+
+chik_gestante_gal_dengue_1 <- select(chik_gestante_gal_dengue_1,
+                                       Requisição,
+                                       Unidade.Solicitante,
+                                       Agravo.Sinan,
+                                       Núm..Notificação.Sinan,
+                                       Data.Notificação.Sinan,
+                                       Paciente,
+                                       Data.de.Nascimento,
+                                       Nome.da.Mãe,
+                                       Municipio.de.Residência,
+                                       Exame,
+                                       Metodologia,
+                                       Data.da.Coleta,
+                                       X1º.Campo.Resultado,
+                                       NU_NOTIFIC,
+                                       ID_AGRAVO,
+                                       NM_PACIENT,
+                                       NM_PACIENT,
+                                       DT_NASC,
+                                       NU_IDADE_N,
+                                       CS_GESTANT,
+                                       municipio_residencia,
+                                       GRS,
+                                       Região_de_Saúde,
+                                       Macro,
+                                       RESUL_PCR_,
+                                       RESUL_SORO,
+                                       RESUL_NS1,
+                                       RESUL_VI_N,
+                                       HISTOPA_N,
+                                       IMUNOH_N,
+                                       RESUL_PRNT,
+                                       CLASSI_FIN,
+                                       CRITERIO,
+                                       EVOLUCAO,
+                                       DT_OBITO,
+                                       DT_ENCERRA, 
+                                       id_pessoa)
+
+chik_gestante_gal_dengue_1 <- rename(chik_gestante_gal_dengue_1, Resul_dengue = X1º.Campo.Resultado)
+
+#chikungunya sinan x chikungunya gal
+chik_gestante_gal_chik_1 <- left_join(data_chik,
+                                      gal_chik, by = "id_pessoa")
+
+chik_gestante_gal_chik_1 <- filter(chik_gestante_gal_chik_1,
+                                   chik_gestante_gal_chik_1$CS_GESTANT == "1" |
+                                     chik_gestante_gal_chik_1$CS_GESTANT == "2" |
+                                     chik_gestante_gal_chik_1$CS_GESTANT == "3" |
+                                     chik_gestante_gal_chik_1$CS_GESTANT == "4")
+
+chik_gestante_gal_chik_1 <- select(chik_gestante_gal_chik_1,
+                                     Requisição,
+                                     Unidade.Solicitante,
+                                     Agravo.Sinan,
+                                     Núm..Notificação.Sinan,
+                                     Data.Notificação.Sinan,
+                                     Paciente,
+                                     Data.de.Nascimento,
+                                     Nome.da.Mãe,
+                                     Municipio.de.Residência,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     X1º.Campo.Resultado,
+                                     NU_NOTIFIC,
+                                     ID_AGRAVO,
+                                     NM_PACIENT,
+                                     NM_PACIENT,
+                                     DT_NASC,
+                                     NU_IDADE_N,
+                                     CS_GESTANT,
+                                     municipio_residencia,
+                                     GRS,
+                                     Região_de_Saúde,
+                                     Macro,
+                                     RESUL_PCR_,
+                                     RESUL_SORO,
+                                     RESUL_NS1,
+                                     RESUL_VI_N,
+                                     HISTOPA_N,
+                                     IMUNOH_N,
+                                     RESUL_PRNT,
+                                     CLASSI_FIN,
+                                     CRITERIO,
+                                     EVOLUCAO,
+                                     DT_OBITO,
+                                     DT_ENCERRA, 
+                                     id_pessoa)
+
+chik_gestante_gal_chik_1 <- rename(chik_gestante_gal_chik_1, Resul_chik = X1º.Campo.Resultado)
+chik_gestante_gal_chik_1 <- select(chik_gestante_gal_chik_1,
+                                     Requisição,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     Resul_chik,
+                                     id_pessoa)
+
+#chikungunya sinan x zika gal
+chik_gestante_gal_zika_1 <- left_join(data_chik,
+                                      gal_zika, by = "id_pessoa")
+
+chik_gestante_gal_zika_1 <- filter(chik_gestante_gal_zika_1,
+                                   chik_gestante_gal_zika_1$CS_GESTANT == "1" |
+                                     chik_gestante_gal_zika_1$CS_GESTANT == "2" |
+                                     chik_gestante_gal_zika_1$CS_GESTANT == "3" |
+                                     chik_gestante_gal_zika_1$CS_GESTANT == "4")
+
+chik_gestante_gal_zika_1 <- select(chik_gestante_gal_zika_1,
+                                     Requisição,
+                                     Unidade.Solicitante,
+                                     Agravo.Sinan,
+                                     Núm..Notificação.Sinan,
+                                     Data.Notificação.Sinan,
+                                     Paciente,
+                                     Data.de.Nascimento,
+                                     Nome.da.Mãe,
+                                     Municipio.de.Residência,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     X1º.Campo.Resultado,
+                                     NU_NOTIFIC,
+                                     ID_AGRAVO,
+                                     NM_PACIENT,
+                                     NM_PACIENT,
+                                     DT_NASC,
+                                     NU_IDADE_N,
+                                     CS_GESTANT,
+                                     municipio_residencia,
+                                     GRS,
+                                     Região_de_Saúde,
+                                     Macro,
+                                     RESUL_PCR_,
+                                     RESUL_SORO,
+                                     RESUL_NS1,
+                                     RESUL_VI_N,
+                                     HISTOPA_N,
+                                     IMUNOH_N,
+                                     RESUL_PRNT,
+                                     CLASSI_FIN,
+                                     CRITERIO,
+                                     EVOLUCAO,
+                                     DT_OBITO,
+                                     DT_ENCERRA, 
+                                     id_pessoa)
+
+chik_gestante_gal_zika_1 <- rename(chik_gestante_gal_zika_1, Resul_zika = X1º.Campo.Resultado)
+chik_gestante_gal_zika_1 <- select(chik_gestante_gal_zika_1,
+                                     Requisição,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     Resul_zika,
+                                     id_pessoa)
+
+###juntar chikungunya
+chik_gestante_gal <- left_join(chik_gestante_gal_dengue_1, chik_gestante_gal_chik_1, by = "id_pessoa")
+chik_gestante_gal <- left_join(chik_gestante_gal, chik_gestante_gal_zika_1, by = "id_pessoa")  
+
+chik_gestante_gal <- select(chik_gestante_gal,
+                              NU_NOTIFIC,
+                              ID_AGRAVO,
+                              NM_PACIENT,
+                              Requisição.x,
+                              Exame.x,
+                              Metodologia.x,
+                              Resul_dengue,
+                              Requisição.y,
+                              Exame.y,
+                              Metodologia.y,
+                              Resul_chik,
+                              Requisição,
+                              Exame,
+                              Metodologia,
+                              Resul_zika,
+                              DT_NASC,
+                              NU_IDADE_N,
+                              CS_GESTANT,
+                              municipio_residencia,
+                              GRS,
+                              Região_de_Saúde,
+                              Macro,
+                              RESUL_PCR_,
+                              RESUL_SORO,
+                              RESUL_NS1,
+                              RESUL_VI_N,
+                              HISTOPA_N,
+                              IMUNOH_N,
+                              RESUL_PRNT,
+                              CLASSI_FIN,
+                              CRITERIO,
+                              EVOLUCAO,
+                              DT_OBITO,
+                              DT_ENCERRA,
+                              Unidade.Solicitante,
+                              Agravo.Sinan,
+                              Núm..Notificação.Sinan,
+                              Data.Notificação.Sinan,
+                              Paciente,
+                              Data.de.Nascimento,
+                              Nome.da.Mãe,
+                              Municipio.de.Residência,
+                              id_pessoa)
+
+chik_gestante_gal <- rename(chik_gestante_gal,
+                              Requisição_DE = Requisição.x,
+                              Exame_DE = Exame.x,
+                              Metodologia_DE = Metodologia.x,
+                              Requisição_CH = Requisição.y,
+                              Exame_CH = Exame.y,
+                              Metodologia_CH = Metodologia.y,
+                              Requisição_ZK = Requisição,
+                              Exame_ZK = Exame,
+                              Metodologia_ZK = Metodologia)
+
+#zika sinan x dengue gal
+zika_gestante_gal_dengue_1 <- left_join(data_zika,
+                                        gal_dengue, by = "id_pessoa")
+
+zika_gestante_gal_dengue_1 <- filter(zika_gestante_gal_dengue_1,
+                                     zika_gestante_gal_dengue_1$CS_GESTANT == "1" |
+                                       zika_gestante_gal_dengue_1$CS_GESTANT == "2" |
+                                       zika_gestante_gal_dengue_1$CS_GESTANT == "3" |
+                                       zika_gestante_gal_dengue_1$CS_GESTANT == "4")
+
+zika_gestante_gal_dengue_1 <- select(zika_gestante_gal_dengue_1,
+                                     Requisição,
+                                     Unidade.Solicitante,
+                                     Agravo.Sinan,
+                                     Núm..Notificação.Sinan,
+                                     Data.Notificação.Sinan,
+                                     Paciente,
+                                     Data.de.Nascimento,
+                                     Nome.da.Mãe,
+                                     Municipio.de.Residência,
+                                     Exame,
+                                     Metodologia,
+                                     Data.da.Coleta,
+                                     X1º.Campo.Resultado,
+                                     NU_NOTIFIC,
+                                     ID_AGRAVO,
+                                     NM_PACIENT,
+                                     NM_PACIENT,
+                                     DT_NASC,
+                                     NU_IDADE_N,
+                                     CS_GESTANT,
+                                     municipio_residencia,
+                                     GRS,
+                                     Região_de_Saúde,
+                                     Macro,
+                                     CLASSI_FIN,
+                                     CRITERIO,
+                                     EVOLUCAO,
+                                     DT_OBITO,
+                                     DT_ENCERRA, 
+                                     id_pessoa)
+
+zika_gestante_gal_dengue_1 <- rename(zika_gestante_gal_dengue_1, Resul_dengue = X1º.Campo.Resultado)
+
+#zika sinan x chikungunya gal
+zika_gestante_gal_chik_1 <- left_join(data_zika,
+                                      gal_chik, by = "id_pessoa")
+
+zika_gestante_gal_chik_1 <- filter(zika_gestante_gal_chik_1,
+                                   zika_gestante_gal_chik_1$CS_GESTANT == "1" |
+                                     zika_gestante_gal_chik_1$CS_GESTANT == "2" |
+                                     zika_gestante_gal_chik_1$CS_GESTANT == "3" |
+                                     zika_gestante_gal_chik_1$CS_GESTANT == "4")
+
+zika_gestante_gal_chik_1 <- select(zika_gestante_gal_chik_1,
+                                   Requisição,
+                                   Unidade.Solicitante,
+                                   Agravo.Sinan,
+                                   Núm..Notificação.Sinan,
+                                   Data.Notificação.Sinan,
+                                   Paciente,
+                                   Data.de.Nascimento,
+                                   Nome.da.Mãe,
+                                   Municipio.de.Residência,
+                                   Exame,
+                                   Metodologia,
+                                   Data.da.Coleta,
+                                   X1º.Campo.Resultado,
+                                   NU_NOTIFIC,
+                                   ID_AGRAVO,
+                                   NM_PACIENT,
+                                   NM_PACIENT,
+                                   DT_NASC,
+                                   NU_IDADE_N,
+                                   CS_GESTANT,
+                                   municipio_residencia,
+                                   GRS,
+                                   Região_de_Saúde,
+                                   Macro,
+                                   CLASSI_FIN,
+                                   CRITERIO,
+                                   EVOLUCAO,
+                                   DT_OBITO,
+                                   DT_ENCERRA, 
+                                   id_pessoa)
+
+zika_gestante_gal_chik_1 <- rename(zika_gestante_gal_chik_1, Resul_chik = X1º.Campo.Resultado)
+zika_gestante_gal_chik_1 <- select(zika_gestante_gal_chik_1,
+                                   Requisição,
+                                   Exame,
+                                   Metodologia,
+                                   Data.da.Coleta,
+                                   Resul_chik,
+                                   id_pessoa)
+
+#zika sinan x zika gal
+zika_gestante_gal_zika_1 <- left_join(data_zika,
+                                      gal_zika, by = "id_pessoa")
+
+zika_gestante_gal_zika_1 <- filter(zika_gestante_gal_zika_1,
+                                   zika_gestante_gal_zika_1$CS_GESTANT == "1" |
+                                     zika_gestante_gal_zika_1$CS_GESTANT == "2" |
+                                     zika_gestante_gal_zika_1$CS_GESTANT == "3" |
+                                     zika_gestante_gal_zika_1$CS_GESTANT == "4")
+
+zika_gestante_gal_zika_1 <- select(zika_gestante_gal_zika_1,
+                                   Requisição,
+                                   Unidade.Solicitante,
+                                   Agravo.Sinan,
+                                   Núm..Notificação.Sinan,
+                                   Data.Notificação.Sinan,
+                                   Paciente,
+                                   Data.de.Nascimento,
+                                   Nome.da.Mãe,
+                                   Municipio.de.Residência,
+                                   Exame,
+                                   Metodologia,
+                                   Data.da.Coleta,
+                                   X1º.Campo.Resultado,
+                                   NU_NOTIFIC,
+                                   ID_AGRAVO,
+                                   NM_PACIENT,
+                                   NM_PACIENT,
+                                   DT_NASC,
+                                   NU_IDADE_N,
+                                   CS_GESTANT,
+                                   municipio_residencia,
+                                   GRS,
+                                   Região_de_Saúde,
+                                   Macro,
+                                   CLASSI_FIN,
+                                   CRITERIO,
+                                   EVOLUCAO,
+                                   DT_OBITO,
+                                   DT_ENCERRA, 
+                                   id_pessoa)
+
+zika_gestante_gal_zika_1 <- rename(zika_gestante_gal_zika_1, Resul_zika = X1º.Campo.Resultado)
+zika_gestante_gal_zika_1 <- select(zika_gestante_gal_zika_1,
+                                   Requisição,
+                                   Exame,
+                                   Metodologia,
+                                   Data.da.Coleta,
+                                   Resul_zika,
+                                   id_pessoa)
+
+###juntar zika
+zika_gestante_gal <- left_join(zika_gestante_gal_dengue_1, zika_gestante_gal_chik_1, by = "id_pessoa")
+zika_gestante_gal <- left_join(zika_gestante_gal, zika_gestante_gal_zika_1, by = "id_pessoa")  
+
+zika_gestante_gal <- select(zika_gestante_gal,
+                            NU_NOTIFIC,
+                            ID_AGRAVO,
+                            NM_PACIENT,
+                            Requisição.x,
+                            Exame.x,
+                            Metodologia.x,
+                            Resul_dengue,
+                            Requisição.y,
+                            Exame.y,
+                            Metodologia.y,
+                            Resul_chik,
+                            Requisição,
+                            Exame,
+                            Metodologia,
+                            Resul_zika,
+                            DT_NASC,
+                            NU_IDADE_N,
+                            CS_GESTANT,
+                            municipio_residencia,
+                            GRS,
+                            Região_de_Saúde,
+                            Macro,
+                            CLASSI_FIN,
+                            CRITERIO,
+                            EVOLUCAO,
+                            DT_OBITO,
+                            DT_ENCERRA,
+                            Unidade.Solicitante,
+                            Agravo.Sinan,
+                            Núm..Notificação.Sinan,
+                            Data.Notificação.Sinan,
+                            Paciente,
+                            Data.de.Nascimento,
+                            Nome.da.Mãe,
+                            Municipio.de.Residência,
+                            id_pessoa)
+
+zika_gestante_gal <- rename(zika_gestante_gal,
+                            Requisição_DE = Requisição.x,
+                            Exame_DE = Exame.x,
+                            Metodologia_DE = Metodologia.x,
+                            Requisição_CH = Requisição.y,
+                            Exame_CH = Exame.y,
+                            Metodologia_CH = Metodologia.y,
+                            Requisição_ZK = Requisição,
+                            Exame_ZK = Exame,
+                            Metodologia_ZK = Metodologia)
+
+#juntar gestantes
+gestante_arbo <- bind_rows(dengue_gestante_gal,
+                           chik_gestante_gal,
+                           zika_gestante_gal)
+
+id_gestante_1 <- paste(gestante_arbo$ID_AGRAVO,
+                       gestante_arbo$id_pessoa)
+id_gestante_1 <- data.frame(id_gestante_1)
+
+gestante_arbo <- mutate(gestante_arbo, id_gestante_1)
+gestante_arbo <- gestante_arbo[!duplicated(gestante_arbo$id_gestante_1), ]
+
+gestante_arbo <- subset(gestante_arbo, 
+                        select = -c(id_pessoa,
+                                    id_gestante_1))
+
+#renomear factor ID_AGRAVO
+levels(gestante_arbo$ID_AGRAVO)[levels(gestante_arbo$ID_AGRAVO) == "A90"] <- "Dengue"
+levels(gestante_arbo$ID_AGRAVO)[levels(gestante_arbo$ID_AGRAVO) == "A92.0"] <- "Chikungunya"
+levels(gestante_arbo$ID_AGRAVO)[levels(gestante_arbo$ID_AGRAVO) == "A928"] <- "Zika"
+
+
+#gestante sem gal_zika
+gestante_sem_gal_zika <- gestante_arbo %>% 
+                            filter(is.na(gestante_arbo$Requisição_ZK))
+
+
+incon_gestante <- filter(gestante_arbo,
+                                 gestante_arbo$NU_IDADE_N < "4012" | 
+                                   gestante_arbo$NU_IDADE_N > "4050")
+
+###################### LEFTJOIN DO SINAN COM POSITIVOS GAL ######################
+#dengue
+gal_dengue_sinan <- left_join(gal_dengue,
+                              data_dengue, by = "id_pessoa")
+
+gal_dengue_sinan <- arrange(gal_dengue_sinan, gal_dengue_sinan$Municipio.de.Residência)
+
+#chave para separar duplicados
+id_dengue <- paste(gal_dengue_sinan$Paciente,
+                   gal_dengue_sinan$Data.de.Nascimento,
+                   gal_dengue_sinan$Municipio.de.Residência,
+                   gal_dengue_sinan$Exame)
+
+id_dengue <- data.frame(id_dengue)
+
+gal_dengue_sinan <- mutate(gal_dengue_sinan, id_dengue)
+
+gal_dengue_sinan <- gal_dengue_sinan[!duplicated(gal_dengue_sinan$id_dengue), ]
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$RESUL_PCR_))
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$RESUL_SORO))
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$RESUL_NS1))
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$RESUL_VI_N))
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$HISTOPA_N))
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$IMUNOH_N))
+
+gal_dengue_sinan <- gal_dengue_sinan %>% 
+                      filter(is.na(gal_dengue_sinan$RESUL_PRNT))
+  
+#selecionar colunas 
+gal_dengue_sinan <- select(gal_dengue_sinan,
+                           Requisição,
+                           Unidade.Solicitante,
+                           Agravo.Sinan,
+                           Núm..Notificação.Sinan,
+                           Data.Notificação.Sinan,
+                           Paciente,
+                           Data.de.Nascimento,
+                           Nome.da.Mãe,
+                           Municipio.de.Residência,
+                           Exame,
+                           Metodologia,
+                           Data.da.Coleta,
+                           X1º.Campo.Resultado,
+                           NU_NOTIFIC,
+                           NM_PACIENT,
+                           NM_PACIENT,
+                           DT_NASC,
+                           CS_GESTANT,
+                           municipio_residencia,
+                           GRS,
+                           Região_de_Saúde,
+                           Macro,
+                           RESUL_PCR_,
+                           RESUL_SORO,
+                           RESUL_NS1,
+                           RESUL_VI_N,
+                           HISTOPA_N,
+                           IMUNOH_N,
+                           RESUL_PRNT,
+                           CLASSI_FIN,
+                           CRITERIO,
+                           EVOLUCAO,
+                           DT_OBITO,
+                           DT_ENCERRA)
+
+#separar com notificação e sem notificação
+gal_dengue_notificado <- gal_dengue_sinan %>% 
+                            filter(!is.na(gal_dengue_sinan$NU_NOTIFIC))
+
+gal_dengue_nao_localizado <- gal_dengue_sinan %>% 
+                                filter(is.na(gal_dengue_sinan$NU_NOTIFIC))
+
+#chik
+gal_chik_sinan <- left_join(gal_chik,
+                            data_chik, by = "id_pessoa")
+
+gal_chik_sinan <- arrange(gal_chik_sinan, gal_chik_sinan$Municipio.de.Residência)
+
+#chave para separar duplicados
+id_chik <- paste(gal_chik_sinan$Paciente,
+                   gal_chik_sinan$Data.de.Nascimento,
+                   gal_chik_sinan$Municipio.de.Residência,
+                   gal_chik_sinan$Exame)
+
+id_chik <- data.frame(id_chik)
+
+gal_chik_sinan <- mutate(gal_chik_sinan, id_chik)
+
+gal_chik_sinan <- gal_chik_sinan[!duplicated(gal_chik_sinan$id_chik), ]
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$RESUL_PCR_))
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$RESUL_SORO))
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$RESUL_NS1))
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$RESUL_VI_N))
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$HISTOPA_N))
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$IMUNOH_N))
+
+gal_chik_sinan <- gal_chik_sinan %>% 
+                    filter(is.na(gal_chik_sinan$RESUL_PRNT))
+
+#selecionar colunas 
+gal_chik_sinan <- select(gal_chik_sinan,
+                           Requisição,
+                           Unidade.Solicitante,
+                           Agravo.Sinan,
+                           Núm..Notificação.Sinan,
+                           Data.Notificação.Sinan,
+                           Paciente,
+                           Data.de.Nascimento,
+                           Nome.da.Mãe,
+                           Municipio.de.Residência,
+                           Exame,
+                           Metodologia,
+                           Data.da.Coleta,
+                           X1º.Campo.Resultado,
+                           NU_NOTIFIC,
+                           NM_PACIENT,
+                           NM_PACIENT,
+                           DT_NASC,
+                           CS_GESTANT,
+                           municipio_residencia,
+                           GRS,
+                           Região_de_Saúde,
+                           Macro,
+                           RESUL_PCR_,
+                           RESUL_SORO,
+                           RESUL_NS1,
+                           RESUL_VI_N,
+                           HISTOPA_N,
+                           IMUNOH_N,
+                           RESUL_PRNT,
+                           CLASSI_FIN,
+                           CRITERIO,
+                           EVOLUCAO,
+                           DT_OBITO,
+                           DT_ENCERRA)
+
+#separar com notificação e sem notificação
+gal_chik_notificado <- gal_chik_sinan %>% 
+                        filter(!is.na(gal_chik_sinan$NU_NOTIFIC))
+
+gal_chik_nao_localizado <- gal_chik_sinan %>% 
+                            filter(is.na(gal_chik_sinan$NU_NOTIFIC))
+
+#zika
+gal_zika_sinan <- left_join(gal_zika,
+                            data_zika, by = "id_pessoa")
+
+gal_zika_sinan <- arrange(gal_zika_sinan, gal_zika_sinan$Municipio.de.Residência)
+
+#chave para separar duplicados
+id_zika <- paste(gal_zika_sinan$Paciente,
+                 gal_zika_sinan$Data.de.Nascimento,
+                 gal_zika_sinan$Municipio.de.Residência,
+                 gal_zika_sinan$Exame)
+
+id_zika <- data.frame(id_zika)
+
+gal_zika_sinan <- mutate(gal_zika_sinan, id_zika)
+
+gal_zika_sinan <- gal_zika_sinan[!duplicated(gal_zika_sinan$id_zika), ]
+
+gal_zika_sinan <- gal_zika_sinan %>% 
+                    filter(is.na(gal_zika_sinan$CRITERIO) | 
+                             gal_zika_sinan$CRITERIO == 2 |
+                             gal_zika_sinan$CRITERIO == 8 |
+                             gal_zika_sinan$CRITERIO == 9)
+  
+#selecionar colunas 
+gal_zika_sinan <- select(gal_zika_sinan,
+                         Requisição,
+                         Unidade.Solicitante,
+                         Agravo.Sinan,
+                         Núm..Notificação.Sinan,
+                         Data.Notificação.Sinan,
+                         Paciente,
+                         Data.de.Nascimento,
+                         Nome.da.Mãe,
+                         Municipio.de.Residência,
+                         Exame,
+                         Metodologia,
+                         Data.da.Coleta,
+                         X1º.Campo.Resultado,
+                         NU_NOTIFIC,
+                         DT_NOTIFIC,
+                         DT_SIN_PRI,
+                         NM_PACIENT,
+                         DT_NASC,
+                         CS_GESTANT,
+                         municipio_residencia,
+                         GRS,
+                         Região_de_Saúde,
+                         Macro,
+                         CLASSI_FIN,
+                         CRITERIO,
+                         EVOLUCAO,
+                         DT_OBITO,
+                         DT_ENCERRA)
+
+#separar com notificação e sem notificação
+gal_zika_notificado <- gal_zika_sinan %>% 
+                        filter(!is.na(gal_zika_sinan$NU_NOTIFIC))
+
+gal_zika_nao_localizado <- gal_zika_sinan %>% 
+                            filter(is.na(gal_zika_sinan$NU_NOTIFIC))
+
+################################ SAÍDAS ########################################
+##saidas #nome da aba = #nome do objeto
+export(list(dengue_reagente = gal_dengue_notificado,
+            chik_reagente = gal_chik_notificado, 
+            zika_reagente = gal_zika_notificado),
+            file = "C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/saida/Solicitar_reagentes.xlsx")
+
+export(list(dengue_pesquisar = gal_dengue_nao_localizado,
+            chik_pesquisar = gal_chik_nao_localizado, 
+            zika_pesquisar = gal_zika_nao_localizado),
+       file = "C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/saida/Pesquisar_notificações.xlsx")
+
+export(list(gestante_sem_gal_zika = gestante_sem_gal_zika,
+            gestante_arbo = gestante_arbo,
+            inconsistencia_gestante = incon_gestante),
+       file = "C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/saida/Olhar_gestantes.xlsx")
+#####FIM

@@ -31,7 +31,7 @@ data_gal_relatorio_jan_mar <- data.frame(data_gal_relatorio_jan_mar)
 
 data_gal_relatorio_abr_jun <- read.csv("C:/Users/ADM/Dropbox/PC/Desktop/Be arbovirose/arbo_exames/Arboviroses vs gal_resultado liberado_relatorio/entrada/gal_vigilancia_epidemiologia(1)/data.csv", header = TRUE, sep = ";")
 data_gal_relatorio_abr_jun <- data.frame(data_gal_relatorio_abr_jun)
-
+ 
 #juntar relatorio dos meses
 data_gal_relatorio_abr_jun$Documento.Paciente.1 <- as.numeric(levels(data_gal_relatorio_abr_jun$Documento.Paciente.1))[data_gal_relatorio_abr_jun$Documento.Paciente.1]
 data_gal_relatorio_abr_jun$Documento.Paciente.2 <- as.numeric(levels(data_gal_relatorio_abr_jun$Documento.Paciente.2))[data_gal_relatorio_abr_jun$Documento.Paciente.2]
